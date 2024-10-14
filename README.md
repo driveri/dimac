@@ -16,6 +16,8 @@ Main Scripts to call:
     readSiemensPhysio.m		- Script to read in Siemens PMU puls data and align with the image timestamps in the DICOM directory
     calc_phys_regressors.m	- Peak fitting script for physiological monitoring traces, written by Kevin Murphy
 
+    pathlength20231107.m	- Script to mask the TOF image and track the path between two input masks. N.B. this needs to be modified for each TOF, to cut branches
+
 
 Dependency scripts (called in the above):
 
