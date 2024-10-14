@@ -10,6 +10,9 @@ Main Scripts to call:
     dimac_tc.m			- GUI for user input into choosing an ROI to generate a DIMAC timeseries
     dimac_pi.m			- script to calculate pulsatililty index, accepting input structure from dimac_tc.m
 
+    dimac_load_and_fit_pox.m	- loads pulseox log file in format for further processing
+    dimac_pox_pulsedelay.m	- calculates the delay between a DIMAC waveform and an associate pulseox (finger pulse) waveform
+
     readSiemensPhysio.m		- Script to read in Siemens PMU puls data and align with the image timestamps in the DICOM directory
     calc_phys_regressors.m	- Peak fitting script for physiological monitoring traces, written by Kevin Murphy
 
@@ -25,7 +28,7 @@ Dependency scripts (called in the above):
     overlay_jet.m		- image plotting tool; called in dimac_tc.m GUI
 
     connectedfun2D.m		- 8-nearest neighbour cluster connectivity; called in dimac_tc.m
-    dimac_peak_extract.m 	- DIMAC timeseries fitting of Fourier Series (5x sine/cosine pairs)
+    dimac_peak_extract.m 	- DIMAC timeseries fitting of Fourier Series (5x sine/cosine pairs); called by dimac_tc.m and dimac_load_and_fit_pox.m
     fourier_design_matrix.m 	- called by dimac_peak_extract.m and dimac_pox_pulsedelay.m
 
 
