@@ -1,8 +1,25 @@
-function out = readSiemensPhysio(PULSfname,DICOMfolder)
+function out = readSiemensPhysio(PULSfname,DICOMfolder,out_tsv_name)
 % Code to read readSiemensPhysio and generate volume triggers, for use with
 % peak detection and rebinning of the data based on the cardiac cycle
 % N.B. pulse trace interpolated up to 2.5ms temporal resolution, to match
 % the Siemens PMU tic resolution, which the scanner triggers are locked to.
+%
+% IDD 07/10/2024: added an option to output to tsv (based on optional 3rd
+%                 input)
+%
+% Usage:    out = readSiemensPhysio(PULSfname,DICOMfolder,out_tsv_name)
+%
+% Inputs:       PULSfname      - input Siemens PULS logfile (string)
+%               DICOMfolder    - (string) location of the DICOM files, needed
+%                                to generate trigger markers for each timepoint
+%               out_tsv_name   - (optional; string; no extension) output
+%                                filename, this will be two columns, triggers 
+%                                and pulse trace, at 2.5 ms resolution
+%
+% Output:               out    - 3x columns:
+%                                       scanner tics (2.5 ms units after midnight)
+%                                       scanner triggers, marking when each measurement acquired
+%                                       pulse trace
 
 [ACQ_TIME_TICS,CHANNEL,VALUE,SIGNAL] = importSiemens_PULS(PULSfname);
 % [VOLUME,SLICE,ACQ_START_TICS,ACQ_FINISH_TICS,ECHO] = importSiemens_Info('Physio_20230113_153045_6d8c998b-f869-4b40-9a06-b7fb6657a3bf_Info.log');
@@ -60,3 +77,7 @@ out(:,3) = interp1(ACQ_TIME_TICS,VALUE,out(:,1),'linear');
 % for count = 1:numel(ACQ_START_TICS)
 % puls_sync(count) = mean(VALUE(find(abs(ACQ_TIME_TICS-ACQ_START_TICS(count))==min(abs(ACQ_TIME_TICS-ACQ_START_TICS(count))))));
 % end
+
+if nargin > 2
+    dlmwrite([out_tsv_name,'.tsv'],out(:,2:3),'\t')
+end
