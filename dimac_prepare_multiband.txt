@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Script to take multiband DIMAC data and split up the slices, ready for input into dimac_roi20240809.txt
+# IDD 28/08/2024
+
+dimac_mb_nifti=$1
+
+slicethickness_mm=10
+
+for slicenum in 0 1 # To Do: read number of slices from nifti header
+do
+    3dZcutup -prefix ${dimac_mb_nifti%%.*}_slice${slicenum}.nii.gz -keep ${slicenum} ${slicenum} ${dimac_mb_nifti}
+    3drefit -zdel ${slicethickness_mm} -keepcen ${dimac_mb_nifti%%.*}_slice${slicenum}.nii.gz # change slice thickness to 10 mm, discarding the slice gap
+done
