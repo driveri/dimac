@@ -10,9 +10,13 @@ Main Scripts to call:
     dimac_tc.m			- GUI for user input into choosing an ROI to generate a DIMAC timeseries
     dimac_pi.m			- script to calculate pulsatililty index, accepting input structure from dimac_tc.m
 
+    dimac_prepare_multiband.txt - BASH script to split a 2-slice multiband dataset into individual slices. Use this before running dimac_roi20241002.m on multiband data.
+
     dimac_load_and_fit_pox.m	- loads pulseox log file in format for further processing
     dimac_pox_pulsedelay.m	- calculates the delay between a DIMAC waveform and an associate pulseox (finger pulse) waveform
+    dimac_multiband_pulsedelay.m- where 2-slice multiband data available, this skips the pulseox reference and calculates the delay directly between arteries in the 2 slices
 
+    readADI_forDIMACpuls.m 	- Script to read in pulseox data from the CUBRIC ADI physiologicical monitoring setup
     readSiemensPhysio.m		- Script to read in Siemens PMU puls data and align with the image timestamps in the DICOM directory
     calc_phys_regressors.m	- Peak fitting script for physiological monitoring traces, written by Kevin Murphy
 
