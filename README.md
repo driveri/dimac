@@ -11,6 +11,7 @@ Main Scripts to call:
     dimac_pi.m			- script to calculate pulsatililty index, accepting input structure from dimac_tc.m
 
     dimac_prepare_multiband.txt - BASH script to split a 2-slice multiband dataset into individual slices. Use this before running dimac_roi20241002.m on multiband data.
+    dimac_BATCH_multiband.m	- script to be used for batch processing - combines the 2-slice multiband DIMAC pipeline to calculate the delay from an inferior slice vessel to a superior slice vessel
 
     dimac_load_and_fit_pox.m	- loads pulseox log file in format for further processing
     dimac_pox_pulsedelay.m	- calculates the delay between a DIMAC waveform and an associate pulseox (finger pulse) waveform
