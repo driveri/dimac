@@ -1,10 +1,19 @@
-% Script to load in SPIKE data, find scanner triggers from a specific scan
+% Script to load in ADI data (LabChart), find scanner triggers from a specific scan
 % and return the pulse trace data for that scan
 % Ian Driver (IDD) 14/04/2023
+%%%%
+% USAGE: readADI_forDIMACpuls(fname,trig_colnum,puls_colnum,fs)
+%
+%    fname 		- input filename
+%    trig_colnum 	- column number for scanner triggers
+%    puls_colnum 	- column number for pulse trace
+%    fs 		- sampling frequency (Hz)
+%%%%
 %
 % Trigger formatting and segmentation from Joe Whittaker's script metric_physioproc_spike.m
 %
 % IDD 21/7/23: changed script to a function to accept a filename (fname), column numbers of scanner triggers (trig_colnum) and pulse (puls_colnum), and sampling rate (fs=500Hz default)
+% IDD 1/7/25:  updated padding if logic (line 57-65), so if the file starts < 20 s before the first trigger, the padding only goes back to the first timepoint (avoiding indexing errors)
 function readADI_forDIMACpuls(fname,trig_colnum,puls_colnum,fs)
 
 % fname = 'DIMACtest20230331.txt';
@@ -51,9 +60,14 @@ vol(scanStart:scanEnd,:)=trig(scanStart:scanEnd,:);
 
 
 % Padding tPad (default 20s) before and after the scan (or to the end of
-% the log file if < 20s after the last trigger)
-if ((scanEnd+tPad) > size(vol,1))
+% the log file if < 20s after the last trigger; and/or from the start of
+% the log file if < 20s before the first trigger)
+if ((scanEnd+tPad) > size(vol,1)) && ((scanStart-tPad) < 1)
+    idxs=1:size(vol,1);
+elseif ((scanEnd+tPad) > size(vol,1))
     idxs=(scanStart-tPad):size(vol,1);
+elseif (scanStart-tPad) < 1
+    idxs=1:(scanEnd+tPad);
 else
     idxs=(scanStart-tPad):(scanEnd+tPad);
 end
