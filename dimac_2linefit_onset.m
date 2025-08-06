@@ -10,8 +10,10 @@ function [onset_ind,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
 %       tr          - sampling time of the timeseries (in SECONDS)
 %       plotopt     - optional input to plot the onset times
 %
-%       onset_ind   - output vector giving the onset time in ms for each
-%                     pulse, based on the first datapoint occuring at 1 ms
+%       onset_ind   - output vector giving the onset time for each
+%                     pulse, on the timescale of the input data indices
+%                     (i.e. onset_ind = 1.5 means half way between
+%                     timepoints 1 and 2)
 %       fitparams   - output structure, capturing the 2-line fit parameters
 %                     and R^2 informing the onset time calculation
 %                   fitparams.boundind    - start and end boundaries for the
@@ -19,12 +21,21 @@ function [onset_ind,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
 %                   fitparams.fit.R2      - R^2 of 2-line fit for each
 %                                           vertex point, where max(R^2)
 %                                           defines the onset point
-%                   fitparams.fit.linfitB - intercept and gradient of
+%                   fitparams.fit.linfit1B - intercept and gradient of
 %                                           linear fit up to the vertex
 %                                           point
+%                   fitparams.fit.linfit2B - intercept and gradient of the
+%                                           linear fit from the vertex
+%                                           point to the maximum gradient
+%                   fitparams.fit.turningpoint  - turning point indices for
+%                                           each vertex tested (1 ms
+%                                           intervals)
 %
 % change log:
-% DD/MM/YYYY IDD    -   Changed ...
+% 06/08/2025 IDD    -   Removed an interpolation step, so the two line fits
+%                       are performed on the original data, but the turning
+%                       point between the two linear fits can vary at the 1
+%                       ms scale
 
 if nargin < 3
     plotopt = false; % default not to make a plot, if option not specified
@@ -88,17 +99,17 @@ end
 
 clear startpoint endpoint tempcard k mx inddiff i ii ind mx X
 
-%% Interpolation up to 1ms:
-
-if round(tr*1e6)-1e3*round(tr*1e3)~=0 % Check that tr is in ms... N.B. rem and mod don't work in this case due to floating point errors
-    error('TR is not an integer number of milliseconds, so current interpolation code will fail')
-end
-
-t_orig = [1:round(tr/1e-3):round(n*tr/1e-3)]';
-t_1ms = [1:round(n*tr/1e-3)]';
-x_1ms = interp1(t_orig,x,t_1ms); % linear interpolation
-% x_1ms = interpft(x,n*tr/1e-3); % Fourier interpolation
-
+% %% Interpolation up to 1ms:
+% 
+% if round(tr*1e6)-1e3*round(tr*1e3)~=0 % Check that tr is in ms... N.B. rem and mod don't work in this case due to floating point errors
+%     error('TR is not an integer number of milliseconds, so current interpolation code will fail')
+% end
+% 
+% t_orig = [1:round(tr/1e-3):round(n*tr/1e-3)]';
+% t_1ms = [1:round(n*tr/1e-3)]';
+% x_1ms = interp1(t_orig,x,t_1ms); % linear interpolation
+% % x_1ms = interpft(x,n*tr/1e-3); % Fourier interpolation
+% 
 onset_ind = nan(numel(maxind)-1,1);
 fitparams.boundind = nan(numel(maxind)-1,2);
 
@@ -107,59 +118,64 @@ for beatnum = 2:numel(maxind)
     
     %% Track back from pulse peak to point of maximum gradient
     % peak position defines the end of the search space
-    search_mg_end = find(t_1ms==t_orig(maxind(beatnum)));
+    search_mg_end = maxind(beatnum);
     % start of search space is the last quarter of the pulse period
-    search_mg_start = find(t_1ms==t_orig(maxind(beatnum)))-ceil((find(t_1ms==t_orig(maxind(beatnum)))-find(t_1ms==t_orig(maxind(beatnum-1))))/4);
+    search_mg_start = maxind(beatnum)-ceil((maxind(beatnum)-maxind(beatnum-1))/4);
     % within this search space, find point of maximum gradient (uses median
     % for case where multiple points have the same max gradient)
     % N.B. as max gradient point is diff between consecutive points, the
     % later is chosen as the reference point maxgradind.
-    maxgradind = search_mg_start+floor(median(find(diff(x_1ms(search_mg_start:search_mg_end))==max(diff(x_1ms(search_mg_start:search_mg_end))))));
+    maxgradind = search_mg_start+floor(median(find(diff(x(search_mg_start:search_mg_end))==max(diff(x(search_mg_start:search_mg_end))))));
     clear search_mg_end search_mg_start
     
     %% Start of linear fitting defined by point where curve has similar amplitude to the point of max gradient
     % search space is the first 3/4 of the data
-    search_eq_end = find(t_1ms==t_orig(maxind(beatnum)))-ceil((find(t_1ms==t_orig(maxind(beatnum)))-find(t_1ms==t_orig(maxind(beatnum-1))))/4);
-    search_eq_start = find(t_1ms==t_orig(maxind(beatnum-1)));
+    search_eq_end = maxind(beatnum)-ceil((maxind(beatnum)-maxind(beatnum-1))/4);
+    search_eq_start = maxind(beatnum-1);
     % find the point with most similar amplitude to that of the point of
     % maximum gradient
-    startind = search_eq_start-1+floor(median(find(abs(x_1ms(search_eq_start:search_eq_end)-x_1ms(maxgradind))==min(abs(x_1ms(search_eq_start:search_eq_end)-x_1ms(maxgradind))))));
+    startind = search_eq_start-1+floor(median(find(abs(x(search_eq_start:search_eq_end)-x(maxgradind))==min(abs(x(search_eq_start:search_eq_end)-x(maxgradind))))));
     clear search_eq_start search_eq_end
     
     fitparams.boundind(beatnum-1,:) = [startind,maxgradind];
-    fitparams.fit(beatnum-1).R2 = nan(numel(startind+1:maxgradind-1),1);
-    fitparams.fit(beatnum-1).linfitB = nan(numel(startind+1:maxgradind-1),2);
+    fitparams.fit(beatnum-1).R2 = nan(numel(startind+1:1e-3/tr:maxgradind-1),1);
+    fitparams.fit(beatnum-1).linfit1B = nan(numel(startind+1:1e-3/tr:maxgradind-1),2);
+    fitparams.fit(beatnum-1).linfit2B = nan(numel(startind+1:1e-3/tr:maxgradind-1),2);
+    fitparams.fit(beatnum-1).turningpoint = startind+1:1e-3/tr:maxgradind-1e-3/tr;
     count1 = 1;
-    %% Step through indices, as the boundary (vertex point) between two lines: Optimise boundary as maximum R^2 fit to the data
-    for ind1 = startind+1:maxgradind-1
-        % linear fit between starting point and boundary
-        X = [ones(numel(startind:ind1),1) [startind:ind1]'];
-        linfit1 = regress(x_1ms(startind:ind1),X);
+    %% Step through 1ms indices, as the turning point (vertex) between two lines: Optimise vertex as maximum R^2 fit to the data
+    for ind1 = fitparams.fit(beatnum-1).turningpoint
+        % linear fit between starting point and vertex - N.B. up to the
+        % closest previous point to the vertex, as ind1 may not be an integer
+        X = [ones(numel(startind:floor(ind1)),1) [startind:floor(ind1)]'];
+        linfit1 = regress(x(startind:floor(ind1)),X);
         model1 = nan(numel(startind:maxgradind),1);
-        model1(1:numel(startind:ind1)) = linfit1(1)+[startind:ind1]*linfit1(2);
-        % boundary to end(max gradient point) is a line connecting 
+        model1(1:numel(startind:floor(ind1))) = linfit1(1)+[startind:floor(ind1)]*linfit1(2);
+        % vertex to end(max gradient point) is a line connecting 
         % the two points
-        model1(numel(startind:ind1):end) = linspace(model1(numel(startind:ind1)),x_1ms(maxgradind),numel(ind1:maxgradind));
-        tss=ss(x_1ms(startind:maxgradind));
-        rss=ss(x_1ms(startind:maxgradind)-model1);
+        linfit2(2) = (x(maxgradind)-(linfit1(1)+ind1*linfit1(2)))./(maxgradind-ind1); % gradient m = delta_y/delta_x (y=mx+c)
+        linfit2(1) = (linfit1(1)+ind1*linfit1(2)) - linfit2(2)*ind1; % intercept c = y - mx (x and y taken from the vertex point)
+        model1(numel(startind:ceil(ind1)):end) = linfit2(1)+[ceil(ind1):maxgradind]*linfit2(2);
+        tss=ss(x(startind:maxgradind));
+        rss=ss(x(startind:maxgradind)-model1);
         fitparams.fit(beatnum-1).R2(count1)=1-(rss/tss);% R^2 for the 2-line fit
         
-        fitparams.fit(beatnum-1).linfitB(count1,:) = linfit1;
+        fitparams.fit(beatnum-1).linfit1B(count1,:) = linfit1;
+        fitparams.fit(beatnum-1).linfit2B(count1,:) = linfit2;
         count1 = count1+1;
-        clear X linfit1 model1 tss rss
+        clear X linfit1 linfit2 model1 tss rss
     end
-    onset_ind(beatnum-1) = find(fitparams.fit(beatnum-1).R2==max(fitparams.fit(beatnum-1).R2))+startind;
+    onset_ind(beatnum-1) = median(fitparams.fit(beatnum-1).turningpoint(fitparams.fit(beatnum-1).R2==max(fitparams.fit(beatnum-1).R2))); % Where multiple vertices with max R2, take the median
     clear count1 maxgradind startind
 end
 
 if plotopt
     figure('Position',[100 100 800 400])
-    plot(t_1ms,x_1ms)
+    plot(x,'k.')
     hold on
-    plot(t_orig,x,'k.')
-    plot(t_1ms(onset_ind),x_1ms(onset_ind),'rx')
+    plot([onset_ind onset_ind],[min(x) max(x)],'r--')
     hold off
     box off
-    xlabel('time (ms)')
+    xlabel('TR #')
     ylabel('signal')
 end
