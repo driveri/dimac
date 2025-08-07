@@ -36,6 +36,11 @@ function [onset_ind,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
 %                       are performed on the original data, but the turning
 %                       point between the two linear fits can vary at the 1
 %                       ms scale
+% 07/08/2025 IDD    -   Changed the start of the fitting boundary to the
+%                       midpoint between peaks
+%                   -   Restricted the end of the turning point search
+%                       space to the penultimate datapoint, as no
+%                       information to inform R^2 beyond that
 
 if nargin < 3
     plotopt = false; % default not to make a plot, if option not specified
@@ -128,20 +133,23 @@ for beatnum = 2:numel(maxind)
     maxgradind = search_mg_start+floor(median(find(diff(x(search_mg_start:search_mg_end))==max(diff(x(search_mg_start:search_mg_end))))));
     clear search_mg_end search_mg_start
     
-    %% Start of linear fitting defined by point where curve has similar amplitude to the point of max gradient
-    % search space is the first 3/4 of the data
-    search_eq_end = maxind(beatnum)-ceil((maxind(beatnum)-maxind(beatnum-1))/4);
-    search_eq_start = maxind(beatnum-1);
-    % find the point with most similar amplitude to that of the point of
-    % maximum gradient
-    startind = search_eq_start-1+floor(median(find(abs(x(search_eq_start:search_eq_end)-x(maxgradind))==min(abs(x(search_eq_start:search_eq_end)-x(maxgradind))))));
-    clear search_eq_start search_eq_end
+    % IDD 07/08/2025 - The following search is replaced by a more repeatable method, of using the midpoint between peaks as the start of the fitting space
+%     %% Start of linear fitting defined by point where curve has similar amplitude to the point of max gradient
+%     % search space is the first 3/4 of the data
+%     search_eq_end = maxind(beatnum)-ceil((maxind(beatnum)-maxind(beatnum-1))/4);
+%     search_eq_start = maxind(beatnum-1);
+%     % find the point with most similar amplitude to that of the point of
+%     % maximum gradient
+%     startind = search_eq_start-1+floor(median(find(abs(x(search_eq_start:search_eq_end)-x(maxgradind))==min(abs(x(search_eq_start:search_eq_end)-x(maxgradind))))));
+%     clear search_eq_start search_eq_end
+
+    startind = maxind(beatnum)-ceil((maxind(beatnum)-maxind(beatnum-1))/2);
     
     fitparams.boundind(beatnum-1,:) = [startind,maxgradind];
     fitparams.fit(beatnum-1).R2 = nan(numel(startind+1:1e-3/tr:maxgradind-1),1);
     fitparams.fit(beatnum-1).linfit1B = nan(numel(startind+1:1e-3/tr:maxgradind-1),2);
     fitparams.fit(beatnum-1).linfit2B = nan(numel(startind+1:1e-3/tr:maxgradind-1),2);
-    fitparams.fit(beatnum-1).turningpoint = startind+1:1e-3/tr:maxgradind-1e-3/tr;
+    fitparams.fit(beatnum-1).turningpoint = startind+1:1e-3/tr:maxgradind-1; % No information for fitting if the turning point passes the penultimate timepoint, so bound to maxgradind-1
     count1 = 1;
     %% Step through 1ms indices, as the turning point (vertex) between two lines: Optimise vertex as maximum R^2 fit to the data
     for ind1 = fitparams.fit(beatnum-1).turningpoint
@@ -174,6 +182,7 @@ if plotopt
     plot(x,'k.')
     hold on
     plot([onset_ind onset_ind],[min(x) max(x)],'r--')
+    plot(fitparams.boundind,[max(x) max(x)],'g-','LineWidth',3) % IDD 07/08/2025 - added to show the fitting boundaries
     hold off
     box off
     xlabel('TR #')
