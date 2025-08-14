@@ -1,10 +1,10 @@
-function [onset_ind,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
+function [onset_ind,peakR2,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
 % Function to take a DIMAC timeseries and calculate the pulse onset time
 % based on a 2-line fit of the pulse onset
 % 03/06/2025 Ian Driver (IDD)
 %
 % Usage:
-%       [onset_ind,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
+%       [onset_ind,peakR2,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
 %
 %       x           - input timeseries
 %       tr          - sampling time of the timeseries (in SECONDS)
@@ -14,6 +14,9 @@ function [onset_ind,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
 %                     pulse, on the timescale of the input data indices
 %                     (i.e. onset_ind = 1.5 means half way between
 %                     timepoints 1 and 2)
+%
+%       peakR2      - R^2 at the onset point (maximum R^2) for each pulse.
+%
 %       fitparams   - output structure, capturing the 2-line fit parameters
 %                     and R^2 informing the onset time calculation
 %                   fitparams.boundind    - start and end boundaries for the
@@ -41,6 +44,8 @@ function [onset_ind,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
 %                   -   Restricted the end of the turning point search
 %                       space to the penultimate datapoint, as no
 %                       information to inform R^2 beyond that
+% 14/08/2025 IDD    -   Added an output for peak R^2, for outlier detection
+%                       based on fit quality
 
 if nargin < 3
     plotopt = false; % default not to make a plot, if option not specified
@@ -116,6 +121,7 @@ clear startpoint endpoint tempcard k mx inddiff i ii ind mx X
 % % x_1ms = interpft(x,n*tr/1e-3); % Fourier interpolation
 % 
 onset_ind = nan(numel(maxind)-1,1);
+peakR2 = nan(numel(maxind)-1,1);
 fitparams.boundind = nan(numel(maxind)-1,2);
 
 %% Loop through pulse periods
@@ -174,6 +180,7 @@ for beatnum = 2:numel(maxind)
         clear X linfit1 linfit2 model1 tss rss
     end
     onset_ind(beatnum-1) = median(fitparams.fit(beatnum-1).turningpoint(fitparams.fit(beatnum-1).R2==max(fitparams.fit(beatnum-1).R2))); % Where multiple vertices with max R2, take the median
+    peakR2(beatnum-1) = max(fitparams.fit(beatnum-1).R2);
     clear count1 maxgradind startind
 end
 
