@@ -37,6 +37,12 @@ end
 
 if nargin > 4
     if plotopt
-        figure;histogram(onset_time_delay)
+        figure;
+        ax1 = axes;
+        histogram(onset_time_delay)
+        hold on
+        plot(repmat(mean(onset_time_delay)-3*std(onset_time_delay),1,2),ax1.YLim,'r--')
+        plot(repmat(mean(onset_time_delay)+3*std(onset_time_delay),1,2),ax1.YLim,'r--')
+        hold off
     end
 end
