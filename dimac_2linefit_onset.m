@@ -189,7 +189,7 @@ if plotopt
     plot(x,'k.')
     hold on
     plot([onset_ind onset_ind],[min(x) max(x)],'r--')
-    plot(fitparams.boundind,[max(x) max(x)],'g-','LineWidth',3) % IDD 07/08/2025 - added to show the fitting boundaries
+    plot(fitparams.boundind,[max(x) max(x)],'g-','LineWidth',2) % IDD 07/08/2025 - added to show the fitting boundaries
     hold off
     box off
     xlabel('TR #')
