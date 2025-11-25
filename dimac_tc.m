@@ -18,7 +18,7 @@ dimac = load_untouch_nii(dimac_fname);
 
 %% Initialise cluster map and output:
 cm = ones(size(dimac.img,1),size(dimac.img,2),size(dimac.img,3));
-out = [];
+out.flag = false; % Flag to check if user accepts the defined ROI (i.e. presses the Continue button)
 
 tcs = [];
 grad_test = [];
@@ -105,6 +105,7 @@ waitfor(f1) % wait for figure to close before returning function output
             axes(a2);cla;a2.Visible = 'off';
             set(h_out_btn,'visible','off')
             axes(a3);overlay_mask(mean(dimac.img,4));axis off
+            mask1 = cm>0; % Reset mask1 if it is set to zero (e.g. if all voxels in ROI fail the gradient test)
         else
             % Check which ui is calling the function
             if h_chooseROI.Value == 1 % strcmp(class(source),'matlab.ui.control.UIControl') && strcmp(source.Style,'togglebutton')
@@ -201,6 +202,7 @@ waitfor(f1) % wait for figure to close before returning function output
     function buttonfunction(source,callbackdata)
 %        [out.peak,out.base,out.fit2,out.coeffs,out.R2,out.footind]=dimac_peak_extract(out.tc,numel(out.tc),out.tr);
 %        out.K = 5; % Currently hard-coded into dimac_peak_extract.m; K is the # of Fourier pairs fit to each beat.
+        out.flag = true; % Flag notes that the user pressed Continue to accept the ROI (N.B. function will still output the out structure even if the GUI is closed early or errors)
         close(gcf)
         
         % IDD 25/09/2024 - added optional third input for defining filename for saving mask as nifti
