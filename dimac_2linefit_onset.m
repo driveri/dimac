@@ -46,6 +46,11 @@ function [onset_ind,peakR2,fitparams]=dimac_2linefit_onset(x,tr,plotopt)
 %                       information to inform R^2 beyond that
 % 14/08/2025 IDD    -   Added an output for peak R^2, for outlier detection
 %                       based on fit quality
+% 10/02/2026 IDD    -   Changed the peak detection to use inbuilt findpeaks
+%                       (replacing a mean +0.75*std zero-crossing approach)
+%                   -   Used high-pass filtered data (x-x_lp) for the onset
+%                       time calculation, replacing the original unfiltered
+%                       data (x).
 
 if nargin < 3
     plotopt = false; % default not to make a plot, if option not specified
@@ -56,7 +61,7 @@ n = numel(x);
 
 ss = @(x) sum(x.^2); 
 
-%% Peak detection - taken from dimac_peak_extract.m
+%% Peak detection
 
 D = n.*tr;
 k = floor(D/3); % sinusoid order for a 3 s cutoff time
@@ -68,58 +73,17 @@ x_lp=X*B; % 3s low-pass filter
 
 x_hp=sgolayfilt(x-x_lp,5,21); % Savitzy-Golay filter used to smooth the data before peak detection
 
-% search for peaks bounded by zero crossings after applying a mean+0.75std threshold
-mx = -Inf;
-startpoint = 1;
-endpoint = n;
-tempcard = x_hp(startpoint:endpoint);
-thresh = mean(tempcard,'omitnan')+0.75*std(tempcard,'omitnan');
-%thresh = median(tempcard);
-tempcard = ((tempcard-thresh)>0).*(tempcard-thresh);
-maxind = [];
-k = 1;
-for i = 1:length(tempcard)
-    if tempcard(i) > mx
-        mx = tempcard(i);
-        ind = i + startpoint - 1;
-    end
-    if tempcard(i) == 0 && mx ~= 0;
-        maxind(k,1) = ind;
-        k = k+1;
-        mx = -Inf;
-    end
-end
+% IDD 10/02/2026: inbuilt findpeaks function replaces previous peak detection
+[~,maxind] = findpeaks(x_hp,'MinPeakDistance',0.5/tr,'MinPeakProminence',std(x_hp));
+% search for peaks with a minimum prominence of 1 standard deviation and
+% minimum spacing of 0.5 s
 
-% any peaks within 0.5s of a preceding peak are assumed to be local maxima and discarded
-Fs=1/tr;
-rmThresh=ceil(0.5*Fs);
-ii=1;
-while (ii < size(maxind,1))
-    inddiff=maxind(ii+1,:)-maxind(ii,:);
-    while (inddiff < rmThresh)
-        maxind(ii+1,:)=[];
-        if (ii ~= size(maxind,1))
-            inddiff=maxind(ii+1,:)-maxind(ii,:);
-        else
-            inddiff=Inf;
-        end
-    end
-    ii=ii+1;
-end
+clear X
 
-clear startpoint endpoint tempcard k mx inddiff i ii ind mx X
+% IDD 10/02/2026: calculate onset point position using 3s cutoff filtered
+% data:
+x = x-x_lp;
 
-% %% Interpolation up to 1ms:
-% 
-% if round(tr*1e6)-1e3*round(tr*1e3)~=0 % Check that tr is in ms... N.B. rem and mod don't work in this case due to floating point errors
-%     error('TR is not an integer number of milliseconds, so current interpolation code will fail')
-% end
-% 
-% t_orig = [1:round(tr/1e-3):round(n*tr/1e-3)]';
-% t_1ms = [1:round(n*tr/1e-3)]';
-% x_1ms = interp1(t_orig,x,t_1ms); % linear interpolation
-% % x_1ms = interpft(x,n*tr/1e-3); % Fourier interpolation
-% 
 onset_ind = nan(numel(maxind)-1,1);
 peakR2 = nan(numel(maxind)-1,1);
 fitparams.boundind = nan(numel(maxind)-1,2);
